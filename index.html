@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shrey Patel | Product Engineering & Creative Design OS</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+<style>
+    :root {
+        --accent: #38bdf8;
+        --accent-rgb: 56, 189, 248;
+        --bg: #030712;
+        --surface: rgba(15, 23, 42, 0.7);
+        --text: #f8fafc;
+        --sub-text: #38bdf8;
+        --terminal-bg: rgba(2, 6, 23, 0.96);
+        --card-border: rgba(255, 255, 255, 0.08);
+        --glow: 0 0 25px rgba(56, 189, 248, 0.15);
+        --transition: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .light-mode {
+        --accent: #0284c7;
+        --accent-rgb: 2, 132, 199;
+        --bg: #f8fafc;
+        --surface: rgba(255, 255, 255, 0.85);
+        --text: #0f172a;
+        --sub-text: #0284c7;
+        --terminal-bg: rgba(241, 245, 249, 0.98);
+        --card-border: rgba(15, 23, 42, 0.1);
+        --glow: 0 10px 40px rgba(0, 0, 0, 0.05);
+    }
+
+    * { 
+        margin: 0; 
+        padding: 0; 
+        box-sizing: border-box; 
+        -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        transition: background-color 1s ease, color 0.5s ease;
+        width: 100vw;
+        min-height: 100vh;
+        overflow: hidden;
+    }
+
+    body.scroll-active {
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    /* CUSTOM CURSOR SYSTEM - OPTIMIZED */
+    #custom-cursor {
+        position: fixed;
+        width: 8px;
+        height: 8px;
+        background: var(--accent);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 10000;
+        mix-blend-mode: difference;
+        will-change: transform;
+        transform: translate(-50%, -50%);
+        transition: none;
+    }
+
+    #cursor-follower {
+        position: fixed;
+        width: 40px;
+        height: 40px;
+        border: 1.5px solid var(--accent);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9999;
+        transition: width 0.3s ease, height 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+        will-change: transform;
+        transform: translate(-50%, -50%);
+    }
+
+    .cursor-hover {
+        width: 80px !important;
+        height: 80px !important;
+        background: rgba(var(--accent-rgb), 0.1) !important;
+        border-color: transparent !important;
+    }
+
+    @media (pointer: coarse), (hover: none) {
+        #custom-cursor, #cursor-follower { 
+            display: none !important; 
+        }
+        * { 
+            cursor: auto !important; 
+        }
+    }
+
+    @media (pointer: fine) and (hover: hover) {
+        * { 
+            cursor: none !important; 
+        }
+    }
+
+    /* BACKGROUND & INTERACTIVE LAYERS - OPTIMIZED */
+    #canvas-container {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        opacity: 0.6;
+        pointer-events: none !important;
+    }
+
+    #canvas-container canvas {
+        pointer-events: none !important;
+    }
+
+    #spotlight {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 1000px;
+        height: 1000px;
+        background: radial-gradient(circle, rgba(var(--accent-rgb), 0.12) 0%, transparent 70%);
+        pointer-events: none !important;
+        z-index: 0;
+        transform: translate(-50%, -50%);
+        mix-blend-mode: screen;
+        will-change: transform;
+    }
+
+    /* ANIMATIONS */
+    @keyframes rgb-flow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .rgb-text {
+        background: linear-gradient(90deg, #ff3e3e, #33ff33, #3b82f6, #facc15, #ff3e3e);
+        background-size: 300% 300%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: rgb-flow 6s ease infinite;
+    }
+
+    /* PAGE SYSTEM - OPTIMIZED */
+    .page-container {
+        position: relative;
+        width: 100%;
+        min-height: 100vh;
+        perspective: 1200px;
+    }
+
+    .page {
+        position: absolute;
+        inset: 0;
+        padding-top: 100px;
+        z-index: 10;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: none;
+        backface-visibility: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .page::-webkit-scrollbar { 
+        display: none; 
+    }
+
+    .page-hidden {
+        display: none !important;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* TERMINAL COMPONENT */
+    .terminal-shell {
+        background: var(--terminal-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 24px;
+        box-shadow: var(--glow);
+        backdrop-filter: blur(50px);
+        transition: var(--transition);
+    }
+
+    .terminal-header {
+        background: rgba(255,255,255,0.03);
+        padding: 1rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--card-border);
+    }
+
+    .terminal-dot { 
+        width: 12px; 
+        height: 12px; 
+        border-radius: 50%; 
+    }
+
+    .location-tag {
+        color: var(--sub-text);
+        font-weight: 800;
+        letter-spacing: 0.8em;
+        font-family: 'JetBrains Mono', monospace;
+        text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
+        display: inline-block;
+    }
+
+    /* COMPONENT KIT */
+    .magnetic-wrap { 
+        display: inline-block; 
+        will-change: transform;
+        transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .glass-card {
+        background: var(--surface);
+        backdrop-filter: blur(25px);
+        border: 1px solid var(--card-border);
+        border-radius: 32px;
+        transition: var(--transition);
+    }
+
+    .glass-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(var(--accent-rgb), 0.4);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+
+    .skill-meter {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .skill-fill {
+        height: 100%;
+        width: 0;
+        transition: width 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* BUTTONS - ENHANCED Z-INDEX */
+    .btn-primary {
+        background: var(--text);
+        color: var(--bg);
+        padding: 1.25rem 3rem;
+        border-radius: 18px;
+        font-weight: 800;
+        letter-spacing: 0.4em;
+        text-transform: uppercase;
+        font-size: 11px;
+        transition: all 0.3s ease;
+        position: relative;
+        z-index: 100;
+        pointer-events: auto;
+    }
+
+    .btn-primary:hover {
+        background: var(--accent);
+        color: white;
+        transform: scale(1.05);
+        box-shadow: 0 0 30px rgba(var(--accent-rgb), 0.5);
+    }
+
+    .btn-secondary {
+        border: 1px solid var(--card-border);
+        padding: 1.25rem 3rem;
+        border-radius: 18px;
+        font-weight: 800;
+        letter-spacing: 0.4em;
+        text-transform: uppercase;
+        font-size: 11px;
+        transition: all 0.3s ease;
+        position: relative;
+        z-index: 100;
+        pointer-events: auto;
+    }
+
+    .btn-secondary:hover { 
+        background: rgba(var(--accent-rgb), 0.1); 
+        border-color: var(--accent); 
+    }
+
+    .hero-title {
+        font-size: clamp(3rem, 12vw, 11rem);
+        font-weight: 900;
+        line-height: 0.9;
+        letter-spacing: -0.05em;
+    }
+
+    .cursor-blink::after {
+        content: '_';
+        animation: blink 0.8s infinite;
+        color: var(--accent);
+    }
+    
+    @keyframes blink { 
+        50% { opacity: 0; } 
+    }
+
+</style>
+</head>
+<body class="antialiased">
+
+<div id="custom-cursor"></div>
+<div id="cursor-follower"></div>
+<div id="canvas-container"></div>
+<div id="spotlight"></div>
+
+<nav class="fixed top-0 w-full px-12 py-10 flex justify-between items-center z-[1000] pointer-events-none">
+    <div class="magnetic-wrap pointer-events-auto">
+        <div class="glass-card px-8 py-4 rounded-full flex items-center gap-4">
+            <div class="relative">
+                <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping absolute inset-0"></div>
+                <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full relative"></div>
+            </div>
+            <span class="text-[10px] font-black tracking-[0.5em] uppercase opacity-60">SHREY_ARCH_v8.5.0</span>
+        </div>
+    </div>
+
+    <div class="flex gap-6 pointer-events-auto">
+        <button onclick="Portfolio.toggleTheme()" class="magnetic-wrap w-16 h-16 glass-card flex items-center justify-center hover:bg-sky-500 hover:text-white transition-colors">
+            <svg id="theme-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path id="theme-path" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" stroke-width="2.5"/>
+            </svg>
+        </button>
+    </div>
+</nav>
+
+<div class="page-container">
+    
+    <main id="home" class="page flex flex-col items-center justify-center">
+        <div class="max-w-6xl w-full px-8 text-center space-y-20">
+            
+            <div class="space-y-8">
+                <div class="overflow-hidden">
+                    <p id="loc-tag" class="location-tag text-[11px] translate-y-full opacity-0">
+                        &lt;  Creativity based Developer /&gt;
+                    </p>
+                </div>
+                
+                <h1 class="hero-title select-none">
+                    <span id="name-typewriter" class="cursor-blink"></span>
+                </h1>
+            </div>
+
+            <div id="terminal-main" class="terminal-shell max-w-3xl mx-auto w-full overflow-hidden opacity-0 translate-y-20">
+                <div class="terminal-header">
+                    <div class="flex gap-3">
+                        <div class="terminal-dot bg-red-500/60"></div>
+                        <div class="terminal-dot bg-yellow-500/60"></div>
+                        <div class="terminal-dot bg-green-500/60"></div>
+                    </div>
+                    <span class="font-mono text-[10px] opacity-40 tracking-[0.4em] uppercase">sh_os // init.bin</span>
+                    <div class="w-12"></div>
+                </div>
+                
+                <div class="p-12 font-mono text-left text-sm md:text-base min-h-[250px] space-y-6">
+                    <div class="flex gap-4">
+                        <span class="text-sky-500 font-bold">~</span>
+                        <p id="intro-buffer" class="rgb-text leading-relaxed"></p>
+                    </div>
+                    
+                    <div id="input-container" class="flex items-center gap-4 opacity-0 transition-opacity duration-1000">
+                        <span class="text-emerald-500 font-bold">$</span>
+                        <input type="text" id="cli-input" 
+                               class="bg-transparent border-none outline-none text-white w-full placeholder:opacity-20"
+                               placeholder="Type 'help' for available commands..."
+                               autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
+            <div id="action-row" class="flex flex-wrap justify-center gap-10 opacity-0 translate-y-10">
+                <button onclick="Portfolio.navigate('resume')" class="btn-primary magnetic-wrap">Explore Portfolio</button>
+                <button onclick="window.location.href='mailto:shrey0950@gmail.com'" class="btn-secondary magnetic-wrap">Initialize Link</button>
+            </div>
+
+        </div>
+
+        <div class="absolute bottom-12 w-full px-16 flex justify-between items-end opacity-20 text-[9px] tracking-[0.6em] uppercase font-space pointer-events-none">
+            <div class="space-y-3">
+                <p id="hud-clock" class="text-xs font-black text-white">00:00:00</p>
+                <p>Status: Optimization_Active</p>
+            </div>
+            <div class="text-right space-y-3">
+                <p id="hud-visitor">Node_Token: #7742</p>
+                <p>© 2026 SP_Labs</p>
+            </div>
+        </div>
+    </main>
+
+    <section id="resume" class="page page-hidden">
+        <div class="max-w-7xl mx-auto px-4 md:px-8 pb-20 md:pb-40">
+            
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0 mb-12 md:mb-20">
+                <button onclick="Portfolio.navigate('home')" class="magnetic-wrap px-6 md:px-8 py-3 md:py-4 glass-card font-bold text-[9px] md:text-[10px] tracking-widest uppercase hover:bg-white hover:text-black w-full md:w-auto">
+                    ← Back Home
+                </button>
+                <button onclick="Portfolio.exportPDF()" class="magnetic-wrap bg-sky-500 text-white px-8 md:px-10 py-3 md:py-4 rounded-2xl font-black text-[9px] md:text-[10px] tracking-widest uppercase shadow-2xl shadow-sky-500/40 w-full md:w-auto">
+                    Export PDF
+                </button>
+            </div>
+
+            <div id="resume-root" class="space-y-16 md:space-y-24">
+                
+                <div class="relative p-8 md:p-16 lg:p-20 flex flex-col md:flex-row items-center gap-12 md:gap-20">
+                    <div class="relative group">
+                        <div class="absolute -inset-4 md:-inset-6 bg-sky-500 rounded-3xl md:rounded-[4rem] blur-3xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                        <img src="Images/IMG_2236.JPG" 
+                             class="relative w-48 h-48 md:w-64 md:h-64 rounded-3xl md:rounded-[4rem] object-cover border-4 md:border-8 border-white/10 grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl">
+                    </div>
+                    
+                    <div class="text-center md:text-left space-y-6 md:space-y-8">
+                        <h2 class="text-5xl md:text-7xl lg:text-[7rem] font-black tracking-tighter leading-none">Shrey Patel</h2>
+                        <div class="flex flex-wrap justify-center md:justify-start gap-3 md:gap-5">
+                            <span class="px-4 md:px-6 py-2 md:py-2.5 bg-sky-500 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest">Product Engineer</span>
+                            <span class="px-4 md:px-6 py-2 md:py-2.5 border border-white/10 rounded-xl text-[9px] md:text-[10px] font-bold uppercase tracking-widest">Full-Stack Design</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 md:gap-16 lg:gap-20 px-4 md:px-8">
+                    <div class="lg:col-span-4 space-y-12 md:space-y-16">
+                        <section>
+                            <h3 class="text-[10px] md:text-[11px] font-black uppercase tracking-[0.5em] md:tracking-[0.7em] text-sky-500 mb-8 md:mb-12 border-b border-white/10 pb-4 md:pb-6">Stack_Parameters</h3>
+                            <div id="skills-container" class="space-y-8 md:space-y-10"></div>
+                        </section>
+
+                        <section>
+                            <h3 class="text-[10px] md:text-[11px] font-black uppercase tracking-[0.5em] md:tracking-[0.7em] text-sky-500 mb-8 md:mb-12 border-b border-white/10 pb-4 md:pb-6">Education_History</h3>
+                            <div class="pl-6 md:pl-10 border-l-4 border-sky-500/40 space-y-3 md:space-y-4">
+                                <h4 class="font-bold text-xl md:text-2xl">Diploma in ECE</h4>
+                                <p class="text-slate-300 font-medium text-sm md:text-base">VPMP Polytechnic</p>
+                                <p class="text-[10px] md:text-[11px] font-black text-sky-500 uppercase tracking-widest pt-3 md:pt-4">2025 — Active</p>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="lg:col-span-8 space-y-16 md:space-y-24">
+                        <section>
+                            <h3 class="text-[10px] md:text-[11px] font-black uppercase tracking-[0.5em] md:tracking-[0.7em] text-sky-500 mb-10 md:mb-16 border-b border-white/10 pb-4 md:pb-6">Career_Execution</h3>
+                            <div id="experience-container" class="space-y-12 md:space-y-16"></div>
+                        </section>
+
+                        <section>
+                            <h3 class="text-[10px] md:text-[11px] font-black uppercase tracking-[0.5em] md:tracking-[0.7em] text-sky-500 mb-10 md:mb-16 border-b border-white/10 pb-4 md:pb-6">Production_Gallery</h3>
+                            <div id="projects-container" class="space-y-0"></div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+    "use strict";
+
+    const PortfolioData = {
+        skills: [
+            { name: "Frontend Engineering", val: 95, color: "bg-sky-400" },
+            { name: "Python / AI Integration", val: 88, color: "bg-emerald-400" },
+            { name: "Creative Art Direction", val: 92, color: "bg-sky-400" },
+            { name: "System Architecture", val: 84, color: "bg-emerald-400" },
+            { name: "Embedded Logic", val: 80, color: "bg-sky-400" }
+        ],
+        experience: [
+            {
+                title: "Lead Product Engineer",
+                company: "CraftyLabs",
+                period: "Dec 2025 — Present",
+                description: "Spearheading the convergence of high-level UI design with hardware-integrated ecosystems. Optimized rendering pipelines for complex data dashboards."
+            },
+            {
+                title: "BBA Intern",
+                company: "Avyott",
+                period: "july 2025 —  october 2025",
+                description: "Worked as an intern in the sales department and learned about sales processes and customer relations."
+            }
+        ],
+        projects: [
+            { id: 1, title: "Proffesor Portfolio", tag: "portfolio website", desc: "developed a portfolio for my college faculty.", link: "https://er-sachinpatel.vercel.app/" },
+            { id: 2, title: "Pomodoro OS", tag: "UX Research", desc: "Interactive visual Pomodoro Operating system.", link: "https://coderxshrey.github.io/Pomodoro-OS/" },
+            { id: 3, title: "KernelUI", tag: "Design System", desc: "A modular framework for building hardware-software bridges.", link: "#" },
+            { id: 4, title: "Spectral", tag: "Creative Tech", desc: "Experimenting with WebGL-driven visual experiences and data art.", link: "#" }
+        ]
+    };
+
+    const Portfolio = {
+        state: {
+            currentTheme: localStorage.getItem('sh_theme') || 'dark',
+            currentPage: 'home',
+            isTyping: false,
+            visitorId: Math.floor(1000 + Math.random() * 9000),
+            mouse: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+            smoothMouse: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+            spotlightMouse: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+            isTouchDevice: false,
+            rafId: null
+        },
+
+        init() {
+            this.detectTouchDevice();
+            this.initGraphics();
+            this.initInteraction();
+            this.initHUD();
+            this.runIntroSequence();
+            this.setupTerminal();
+            this.renderData();
+            this.applyTheme(this.state.currentTheme);
+        },
+
+        detectTouchDevice() {
+            this.state.isTouchDevice = ('ontouchstart' in window) || 
+                                       (navigator.maxTouchPoints > 0) || 
+                                       (navigator.msMaxTouchPoints > 0);
+            if (this.state.isTouchDevice) {
+                document.body.classList.add('touch-device');
+            }
+        },
+
+        initGraphics() {
+            const container = document.getElementById('canvas-container');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 2000);
+            const renderer = new THREE.WebGLRenderer({ 
+                antialias: false, 
+                alpha: true, 
+                powerPreference: "high-performance",
+                precision: "lowp"
+            });
+            
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+
+            const particles = this.state.isTouchDevice ? 400 : 600;
+            const geo = new THREE.BufferGeometry();
+            const positions = new Float32Array(particles * 3);
+            
+            for(let i = 0; i < particles * 3; i++) {
+                positions[i] = (Math.random() - 0.5) * 1500;
+            }
+            
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const mat = new THREE.PointsMaterial({ 
+                color: 0x38bdf8, 
+                size: 2, 
+                transparent: true, 
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            const starField = new THREE.Points(geo, mat);
+            scene.add(starField);
+            camera.position.z = 800;
+
+            let lastTime = 0;
+            const targetFPS = 60;
+            const frameInterval = 1000 / targetFPS;
+
+            const animate = (currentTime) => {
+                requestAnimationFrame(animate);
+                
+                const elapsed = currentTime - lastTime;
+                if (elapsed > frameInterval) {
+                    lastTime = currentTime - (elapsed % frameInterval);
+                    
+                    starField.rotation.y += 0.0003;
+                    starField.rotation.x += 0.0001;
+                    renderer.render(scene, camera);
+                }
+            };
+            animate(0);
+
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                }, 250);
+            }, { passive: true });
+        },
+
+        initInteraction() {
+            if (this.state.isTouchDevice) {
+                return;
+            }
+
+            const cursor = document.getElementById('custom-cursor');
+            const follower = document.getElementById('cursor-follower');
+            const spotlight = document.getElementById('spotlight');
+            const magneticElements = document.querySelectorAll('.magnetic-wrap');
+
+            let lastMouseMoveTime = 0;
+            const mouseMoveThrottle = 16;
+
+            window.addEventListener('pointermove', (e) => {
+                const now = performance.now();
+                if (now - lastMouseMoveTime < mouseMoveThrottle) return;
+                lastMouseMoveTime = now;
+
+                this.state.mouse.x = e.clientX;
+                this.state.mouse.y = e.clientY;
+                
+                cursor.style.left = `${e.clientX}px`;
+                cursor.style.top = `${e.clientY}px`;
+            }, { passive: true });
+
+            const updateLoop = () => {
+                this.state.smoothMouse.x += (this.state.mouse.x - this.state.smoothMouse.x) * 0.15;
+                this.state.smoothMouse.y += (this.state.mouse.y - this.state.smoothMouse.y) * 0.15;
+
+                this.state.spotlightMouse.x += (this.state.mouse.x - this.state.spotlightMouse.x) * 0.08;
+                this.state.spotlightMouse.y += (this.state.mouse.y - this.state.spotlightMouse.y) * 0.08;
+
+                follower.style.left = `${this.state.smoothMouse.x}px`;
+                follower.style.top = `${this.state.smoothMouse.y}px`;
+                
+                spotlight.style.left = `${this.state.spotlightMouse.x}px`;
+                spotlight.style.top = `${this.state.spotlightMouse.y}px`;
+
+                let isHoveringAny = false;
+                magneticElements.forEach(el => {
+                    const rect = el.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    const distance = Math.hypot(this.state.smoothMouse.x - centerX, this.state.smoothMouse.y - centerY);
+
+                    if(distance < 100) {
+                        const strength = 0.3;
+                        const x = (this.state.smoothMouse.x - centerX) * strength;
+                        const y = (this.state.smoothMouse.y - centerY) * strength;
+                        el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+                        isHoveringAny = true;
+                    } else {
+                        el.style.transform = '';
+                    }
+                });
+
+                if (isHoveringAny) {
+                    follower.classList.add('cursor-hover');
+                } else {
+                    follower.classList.remove('cursor-hover');
+                }
+
+                this.state.rafId = requestAnimationFrame(updateLoop);
+            };
+            updateLoop();
+        },
+
+        setupTerminal() {
+            const input = document.getElementById('cli-input');
+            const terminalMain = document.getElementById('terminal-main');
+            
+            input.addEventListener('keydown', (e) => {
+                if(e.key === 'Enter') {
+                    e.preventDefault();
+                    const cmd = input.value.toLowerCase().trim();
+                    this.processCommand(cmd);
+                    input.value = '';
+                }
+            });
+            
+            terminalMain.addEventListener('click', (e) => {
+                e.stopPropagation();
+                input.focus();
+            });
+
+            setTimeout(() => {
+                input.focus();
+            }, 2000);
+        },
+
+        processCommand(cmd) {
+            const buffer = document.getElementById('intro-buffer');
+            const commands = {
+                'help': "Available: ls, view resume, clear, light, dark, contact",
+                'ls': "Files: profile.pdf, projects/, experience.log",
+                'view resume': () => this.navigate('resume'),
+                'clear': () => buffer.innerText = "",
+                'light': () => this.applyTheme('light'),
+                'dark': () => this.applyTheme('dark'),
+                'contact': () => window.location.href = 'mailto:shrey0950@gmail.com'
+            };
+
+            const action = commands[cmd];
+            if (typeof action === 'function') {
+                action();
+            } else if (action) {
+                buffer.innerText = action;
+            } else {
+                buffer.innerText = `Command not found: ${cmd}`;
+            }
+        },
+
+        async typewriter(id, text, speed = 40) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.innerText = "";
+            for(let char of text) {
+                el.innerText += char;
+                await new Promise(r => setTimeout(r, speed));
+            }
+        },
+
+        async runIntroSequence() {
+            gsap.to("#loc-tag", { opacity: 1, y: 0, duration: 1, delay: 0.5 });
+            await this.typewriter('name-typewriter', "Shrey Patel", 100);
+            gsap.to("#terminal-main", { opacity: 1, y: 0, duration: 1, ease: "power2.out" });
+            await new Promise(r => setTimeout(r, 400));
+            await this.typewriter('intro-buffer', "System Initialized. Product Engineer based in Gandhinagar. I craft digital landscapes where high-performance engineering meets human-centric design.", 25);
+            document.getElementById('input-container').style.opacity = '1';
+            gsap.to("#action-row", { opacity: 1, y: 0, duration: 1 });
+        },
+
+        navigate(to) {
+            const tl = gsap.timeline();
+            const currentPage = document.querySelector(".page:not(.page-hidden)");
+            const nextPage = document.getElementById(to);
+
+            if (!currentPage || !nextPage) return;
+
+            this.state.currentPage = to;
+
+            tl.to(currentPage, { 
+                opacity: 0, 
+                scale: 0.98, 
+                filter: "blur(10px)", 
+                duration: 0.4, 
+                onComplete: () => {
+                    currentPage.classList.add('page-hidden');
+                    nextPage.classList.remove('page-hidden');
+                    
+                    if (to === 'resume') {
+                        document.body.classList.add('scroll-active');
+                        nextPage.scrollTop = 0;
+                        this.animateSkills();
+                    } else {
+                        document.body.classList.remove('scroll-active');
+                    }
+                }
+            });
+
+            tl.fromTo(nextPage, 
+                { opacity: 0, scale: 1.02, filter: "blur(10px)" }, 
+                { opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.6, ease: "power2.out" }
+            );
+        },
+
+        animateSkills() {
+            setTimeout(() => {
+                document.querySelectorAll('.skill-fill').forEach(fill => {
+                    fill.style.width = fill.getAttribute('data-val') + '%';
+                });
+            }, 400);
+        },
+
+        applyTheme(theme) {
+            const iconPath = document.getElementById('theme-path');
+            if (theme === 'light') {
+                document.body.classList.add('light-mode');
+                iconPath.setAttribute('d', 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z');
+            } else {
+                document.body.classList.remove('light-mode');
+                iconPath.setAttribute('d', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z');
+            }
+            this.state.currentTheme = theme;
+            localStorage.setItem('sh_theme', theme);
+        },
+
+        toggleTheme() {
+            this.applyTheme(this.state.currentTheme === 'dark' ? 'light' : 'dark');
+        },
+
+        initHUD() {
+            const clock = document.getElementById('hud-clock');
+            const visitor = document.getElementById('hud-visitor');
+            
+            const updateClock = () => {
+                clock.innerText = new Date().toLocaleTimeString('en-GB', { hour12: false });
+            };
+            updateClock();
+            setInterval(updateClock, 1000);
+            
+            visitor.innerText = `Node_Token: #${this.state.visitorId}`;
+        },
+
+        renderData() {
+            document.getElementById('skills-container').innerHTML = PortfolioData.skills.map(s => `
+                <div class="space-y-3">
+                    <div class="flex justify-between text-[9px] md:text-[10px] font-black uppercase tracking-tighter">
+                        <span class="text-white">${s.name}</span><span class="text-sky-400">${s.val}%</span>
+                    </div>
+                    <div class="skill-meter"><div class="skill-fill ${s.color}" data-val="${s.val}"></div></div>
+                </div>
+            `).join('');
+
+            document.getElementById('experience-container').innerHTML = PortfolioData.experience.map(e => `
+                <div class="group relative pl-8 md:pl-12">
+                    <div class="absolute left-0 top-2 w-1 md:w-1.5 h-full bg-white/10 group-hover:bg-sky-500 transition-all duration-500"></div>
+                    <h4 class="text-2xl md:text-3xl lg:text-4xl font-black group-hover:text-sky-400 transition-colors">${e.title}</h4>
+                    <p class="text-sky-400 font-bold text-[10px] md:text-[11px] uppercase tracking-widest mt-2 md:mt-3">${e.company} // ${e.period}</p>
+                    <p class="text-slate-300 mt-4 md:mt-6 text-sm md:text-base leading-relaxed max-w-3xl">${e.description}</p>
+                </div>
+            `).join('');
+
+            document.getElementById('projects-container').innerHTML = PortfolioData.projects.map(p => `
+                <a href="${p.link}" target="_blank" rel="noopener noreferrer" class="group block space-y-2 md:space-y-3 py-4 md:py-6 border-b border-white/10 last:border-0 transition-all duration-300 hover:translate-x-2">
+                    <div class="flex items-baseline gap-3 md:gap-4">
+                        <span class="text-sky-400 text-lg md:text-2xl font-bold group-hover:translate-x-1 transition-transform">→</span>
+                        <div class="flex-1">
+                            <h5 class="text-xl md:text-2xl lg:text-3xl font-black group-hover:text-sky-400 transition-colors">${p.title}</h5>
+                            <p class="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-1">${p.tag}</p>
+                        </div>
+                    </div>
+                    <p class="text-slate-300 text-xs md:text-sm leading-relaxed ml-8 md:ml-11 max-w-3xl">${p.desc}</p>
+                </a>
+            `).join('');
+        },
+
+        exportPDF() {
+            const element = document.getElementById('resume-root');
+            const opt = {
+                margin: 0,
+                filename: `Shrey_Patel_Dossier_${this.state.visitorId}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => Portfolio.init());
+    gsap.config({ force3D: true });
+</script>
+</body>
+</html>
